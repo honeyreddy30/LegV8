@@ -1,0 +1,180 @@
+//Team Members
+//Ssai Sanjanna Ganji, ssganji@iastate.edu
+//Preethi Reddy Nagireddy, pznr07@iastate.edu
+//Honey Reddy Nagireddy,hzn0030@iastate.edu
+
+
+main:
+DUMP
+    MOV X29, SP                  
+    SUB SP, SP, #4096// Assume space for array (512 * 8 bytes)
+    // Array base address in X19
+    MOV X19, SP
+    // Array size N=512 in X20
+    MOV X20, #512
+    MOV X0, X19// Base address of array
+    MOV X1, X20// Size of array
+    BL fill
+    // Call insertion_sort to sort the array
+    BL insertion_sort
+    MOV X0, X19// Array base address
+    MOV X1, #0// Start index
+    MOV X2, #51// End index (N-1)
+    MOV X3, #0// Value to search for
+    BL binary_search
+    PRNT X0// Print the index of the found element
+
+    // Search for the largest element (N-1)
+    MOV X3, #511// Value to search for
+    BL binary_search
+    PRNT X0
+
+    // Search for the middle element ((N-1)/2)
+    MOV X3, #256
+    BL binary_search
+    PRNT X0
+
+    // Search for a non-existing element (N)
+    MOV X3, #512
+    BL binary_search
+    PRNT X0
+    // end
+    HALT
+
+fill:
+    STUR LR,[SP,#8] //Making room for 2 registers
+
+start loop: //Starting for-loop
+    MOV X9, XZR //i=0
+    LSL X10,X9,#3 //Temp reg X10=i*8
+    ADD X10,X0,X10 // X10=a + (i*8)
+    LDUR X11,[X10,#0] //load a[i] , temp reg X11=a[i]
+    CMP X9,X1 // Comparing i to n
+    B.GE end loop // go to end loop, if i>=n
+    SUB X12, X1,X9 //temp reg X12=n-i
+    STUR X12,[X10,#0] //storing X12 to X10
+    SUBI X11,X12,#1 //X11 = n - i -1
+    STUR X11,[X10,#0] //storing X11 to X10
+    ADDI X9,X9,#1 //i++
+    B start loop //repeats loop
+end loop: //ending for-loop
+    LDUR LR,[SP,#8] 
+    BR LR
+
+
+is_insert: 
+    STUR LR, [SP,#16]
+
+    LSL X9,X2,#3 //Temp reg X9 = where*8
+    ADD X9,X0,X9 //X9 = a + (where*8)
+    STUR X1,[X9,#0] //value = a[where]
+    LDUR X30,[SP,#16]
+    BR LR
+
+
+is_shift:
+    SUBI SP,SP,#40 //making room for 5 registers
+    STUR LR,[SP,#32] //save LR on stack
+    STUR X11,[SP,#24] //save X11 on stack
+    STUR X1,[SP,#16] //save X1 on stack
+    STUR X0,[SP,#8] //save X0 on stack
+    STUR X10,[SP,#0] //save X10 on stack
+
+    LSL X9,X1,#3 //temp reg X9 = end*8
+    ADD X9,X0,X9 //X9 = a + (end*8)
+    LDUR X9,[X9,#0] //X9 = a[end]
+
+    SUBI X10,X1,#1 //temp reg X10 = i = end - 1
+
+START LOOP:
+    MOV X11,X9// temp reg X11 = temp = a[end]
+    CMP X10,#-1 //compare i to -1
+    B.LE END LOOP //go to END LOOP if i<=-1
+    LSL X12,X10,#3 //temp reg X12=i*8
+    ADD X12,X0,X12 //temp X12 = a + (i*8)
+    LDUR X12,[X12,#0] //temp X12 = a[i]
+    CMP X12,X11 //compare a[i] to temp
+    B.LE END LOOP //go to END LOOP if a[i] <= temp
+    LDUR X13,[X12,#8] //temp reg X13 = a[i+1]
+    MOV X13,X12 //X13 = X12, a[i+1] = a[i]
+    SUBI X10,X10,#1 //i--
+    B START LOOP //repeat loop
+END LOOP:
+    ADDI LR,X10,#1 //LR=i + 1
+    STUR X10,[SP,#0] 
+    STUR X0,[SP,#8]
+    STUR X1,[SP,#16]
+    STUR X11,[SP,#24]
+    STUR LR,[SP,#32]
+    SUBI SP,SP,#40
+    BR LR
+
+
+insertion_sort:
+    SUBI SP,SP,#40 //making room for 5 registers
+    STUR LR,[SP,#32] //save LR on stack
+    STUR X10,[SP,#24] //save X10 on stack
+    STUR X11,[SP,#16] //save X11 on stack
+    STUR X12,[SP,#8] //save X12 on stack
+    STUR X2,[SP,#0] //save X2 on stack
+
+    MOV X10,X3 //copy parameter X3 (i) into X10
+    MOV X11,X0 //copy parameter X0 (a) into X11
+    MOV X12,X2 //copy parameter X2 (value/what) into X12
+
+START LOOP:
+    MOV X3,#1 //i=1
+    LSL X9,X3,#3 //temp reg X9= i*8
+    ADD X9,X0,X9 //X9 = a + (i*8)
+    LDUR X9,[X9,#0] //X9 = a[i]
+    CMP X3,X1 //compare i to n
+    B.GE END LOOP // go to END LOOP if i>=n
+    MOV X2,X9 //value=a[i]
+    MOV X0,X11 //first is_insert parameter is a
+    MOV X2,X12 //second is_insert parameter is value/what
+    MOV X3,X10 //second is_shift parameter is i
+    BL is_insert 
+    BL is_shift
+    ADD X3,X3,#1 //i++
+    B start_loop //repeat for-loop
+END LOOP:
+    STUR X2,[SP,#0]
+    STUR X12,[SP,#8]
+    STUR X11,[SP,#16]
+    STUR X10,[SP,#24]
+    STUR LR,[SP,#32]
+    SUBI SP,SP,#40
+    BR LR
+
+BINARY_SEARCH:
+    // X1 = start, X0 = base address of the array *A, X2 = end, X3 = value
+LOOP_START:
+    CMP X1, X2  // compare start and end
+    B.GT END_SEARCH  // if start > end, value not found and end of search(exit)
+    ADD X9, X1, X2  // X9 = start + end, x9 temporary register
+    ADDI X9, X9, #1  // adding 1 to x9
+    LSR X9, X9, 1   // X9 = (start + end + 1) / 2, find mid point by dividing by 2
+    LSL X9, X9, #3  // left shift x9 by 3 bits to scale the index by 8
+LDUR X10, [X0, X9]  // load the value at the address formed by X0+X9 into X10
+
+
+    CMP X3, X10  // compare the value to find (X3) with the value at midpoint (X10)
+    B.EQ FOUND_VALUE  // if equal, value is found
+    B.GT UPDATE_START  // if X3 > X10
+    B.LT UPDATE_END    // if X3 < X10
+
+UPDATE_START:
+    ADD X1, X9, #1  // new start = mid + 1
+    B LOOP_START
+
+UPDATE_END:
+    SUB X2, X9, #1  // new end = mid - 1
+    B LOOP_START
+
+FOUND_VALUE:
+    MOV X30, X9  // move found index to X30 for returning the m value
+    RET
+
+END_SEARCH:
+    MOV X30, #-1  // value not found, return -1
+    RET
